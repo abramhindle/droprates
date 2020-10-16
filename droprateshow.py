@@ -28,15 +28,49 @@ def ciPlot(rate,sub):
     ax.yaxis.set_major_formatter(ysf)
     ax.yaxis.set_minor_formatter(ysf)
     ax.legend()
-    return ax
+    return fig
 
-with open('droprate.pickle', 'rb') as f:
-    result = pickle.load(f)
-    rates = sorted(list(set([x[0] for x in result])))
-    ns = sorted(list(set([x[1] for x in result])))
+def htmlTable(results):
+    rates = sorted(list(set([x[0] for x in results])))
+    ns = sorted(list(set([x[1] for x in results])))
+    rows = []
+    for n in ns:
+        row = []
+        row.append(str(n))
+        sub = [x for x in results if x[1] == n]
+        for rate in rates:
+            s = [x for x in sub if x[0] == rate]
+            rate,n,low,high = s[0]
+
+            row.append(str(low))
+            row.append(str(high))
+        rows.append(row)
+    out = []
+    out.append('<table id="droprates">')
+    out.append('<tr>')
+    out.append('<th>Trials</th>')
     for rate in rates:
-        sub = np.array([x for x in result if x[0] == rate])
-        print(sub)
-        ax = ciPlot(rate,sub)
-        plt.show()
-    
+        out.append("<th>%s low</th><th>%s high</th>" % (rate,rate))
+    for row in rows:
+        out.append("<tr>")
+        for col in row:
+            out.append("<td>%s</td>" % col)
+        out.append("</tr>")
+    out.append('</table>')
+    return "\n".join(out)                                
+
+if __name__ == "__main__":
+    with open('droprate.pickle', 'rb') as f:
+        result = pickle.load(f)
+        rates = sorted(list(set([x[0] for x in result])))
+        ns = sorted(list(set([x[1] for x in result])))
+        with open('droprate.html', 'w') as wf:
+            wf.write(htmlTable(result))
+        for rate in rates:
+            sub = np.array([x for x in result if x[0] == rate])
+            print(sub)
+            fig = ciPlot(rate,sub)
+            fig.savefig('ci95-droprate-{:08.4f}.pdf'.format(rate), bbox_inches='tight')
+            fig.savefig('ci95-droprate-{:08.4f}.png'.format(rate), bbox_inches='tight')
+            plt.close()
+        

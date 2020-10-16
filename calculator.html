@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+  <head>
+    <title>95% CI Calculator</title>
+  </head>
+  <body>
+    <style>
+      #ui {
+          display: flex;
+          flex-direction: row;
+          justify-content: flex-start;
+      }
+      #pipeSetting > span {
+         display: inline-block;
+         width: 5em;
+         text-align: right;
+      }
+      #pipeSetting > input {
+          width: 10em;
+      }
+      #pipeSetting > label {
+         display: inline-block;
+         text-align: right;
+         width: 15em;
+      }
+      #run {
+         width:80%;
+      }
+    </style>
+    <div>
+      <div id="ui">
+        <label for="prob">Drop rate probability (between 0 and 1)</label><br>
+        <input id="prob" value="0.333">      
+        <label for="trials">Number of trials (1+)</label><br>      
+        <input id="trials" value="40">
+        <button id="calculate">Calculate</button>
+      </div>
+      <div id="answers">
+        <span id="answer"></span>
+      </div>
+      <div id="messages">
+      </div>
+    </div>
+    <script>
+    "use strict;";
+/*  https://github.com/borilla/fast-random/blob/master/LICENSE
+MIT License
+
+Copyright (c) 2017 borilla
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+/* https://github.com/borilla/fast-random/blob/master/index.js */
+function randomModule(seed) {
+    function _seed(s) {
+	if ((seed = (s|0) % 2147483647) <= 0) {
+	    seed += 2147483646;
+	}
+    }
+    
+    function _nextInt() {
+	return seed = seed * 48271 % 2147483647;
+    }
+    
+    function _nextFloat() {
+	return (_nextInt() - 1) / 2147483646;
+    }
+    
+    function _ff() {
+        seed = seed * 48271 % 2147483647;
+	return (seed - 1) / 2147483646;
+    }
+
+    function _nextFloats(n) {
+        var out = [];
+        out.length = n;
+        for (var i = 0; i < n; i++) {
+            seed = seed * 48271 % 2147483647;
+	    out[i] = (seed - 1) / 2147483646;
+        }
+        return out;
+    }
+    function _nextTrials(n,p) {
+        var out = 0;
+        for (var i = 0; i < n; i++) {
+            seed = seed * 48271 % 2147483647;
+	    var gp = (seed - 1) / 2147483646;
+            if (gp <= p) { out++ }
+        }
+        return out;
+    }
+
+    
+    _seed(seed);
+
+    return {
+	seed: _seed,
+	nextInt: _nextInt,
+	nextFloat: _nextFloat,
+        ff: _ff,
+        nextFloats: _nextFloats,
+        nextTrials: _nextTrials
+    };
+}
+
+var calcButton = document.getElementById("calculate");
+var probabilityInput = document.getElementById("prob");
+var trialsInput = document.getElementById("trials");
+var maxTrials = 1000000;
+var repeats = 10000;
+var random = randomModule(Math.random() * 2147483646);
+function showMessage(str) {
+    document.getElementById("messages").innerText = str;
+}
+function showAnswer(str) {
+    document.getElementById("answer").innerText = str;
+}
+function numericalSort(arr) {
+    arr.sort(function(a, b) {
+        return a - b;
+    });
+    return arr;
+}
+function nextTrials(n,p) {
+    var out = 0;
+    for (var i = 0; i < n; i++) {
+        out+= Math.random() <= p;
+    }
+    return out;
+}
+function calc95CI(probability, trials, repeats) {
+    // experiments
+    var counts = [];
+    counts.length = repeats;
+    // repeat experiments
+    /*
+    for (var r = 0; r < repeats; r++) {
+        // var successes = 0;
+        // var randoms = random.nextFloats(trials);
+        var successes = random.nextTrials(trials, probability);
+        // for (var t in randoms) {
+        //if (t <= probability) { successes++; }
+        //}
+        for (var t = 0; t < trials; t++) {
+            if (random.ff() <= probability) {
+                successes++;
+            }
+        }
+        counts.push(successes);
+    }*/
+    for (var r = 0; r < repeats; r++) {
+        //var successes = random.nextTrials(trials, probability);
+        var successes = nextTrials(trials, probability);
+        counts[r] = successes;
+    }
+    // quantiles
+    counts = numericalSort(counts);
+    for (var i = 1; i < counts.length; i++) {
+        if (counts[i-1] > counts[i]) {
+            console.log(["Failure to sort",i-1,i,counts[i-1],counts[i]]);
+        }
+    }
+    // console.log(counts);
+    var lowi  = Math.floor(0.025*counts.length);
+    var highi = Math.floor(0.975*counts.length);
+    var res = [counts[lowi],counts[highi]];
+    //console.log(counts);
+    //console.log([lowi,highi],res);
+    return res;
+}
+calcButton.onclick = function() {
+    var trials = new Number(trialsInput.value);
+    var probability = new Number(probabilityInput.value);
+    if (trials <= 0) {
+        return showMessage("Trials must be > 0");
+    }
+    if (trials >= maxTrials) {
+        return showMessage("Trials must be less than 1M (feel free to edit the source code)");
+    }
+    if (probabilityInput < 0) {
+        return showMessage("Probability should be >= 0");
+    }
+    if (probabilityInput > 1.0) {
+        return showMessage("Probability should be <= 1.0");
+    }
+    var ci = calc95CI(probability, trials, repeats);
+    return showAnswer("["+ci[0]+", "+ci[1]+"]: 95% Confidence Interval of sum of successful trials out of "+trials+" Bernoulli trials with probability of "+probability);
+}
+    </script>
+  </body>
+</html>
