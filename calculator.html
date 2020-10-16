@@ -43,81 +43,6 @@
     </div>
     <script>
     "use strict;";
-/*  https://github.com/borilla/fast-random/blob/master/LICENSE
-MIT License
-
-Copyright (c) 2017 borilla
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
-/* https://github.com/borilla/fast-random/blob/master/index.js */
-function randomModule(seed) {
-    function _seed(s) {
-	if ((seed = (s|0) % 2147483647) <= 0) {
-	    seed += 2147483646;
-	}
-    }
-    
-    function _nextInt() {
-	return seed = seed * 48271 % 2147483647;
-    }
-    
-    function _nextFloat() {
-	return (_nextInt() - 1) / 2147483646;
-    }
-    
-    function _ff() {
-        seed = seed * 48271 % 2147483647;
-	return (seed - 1) / 2147483646;
-    }
-
-    function _nextFloats(n) {
-        var out = [];
-        out.length = n;
-        for (var i = 0; i < n; i++) {
-            seed = seed * 48271 % 2147483647;
-	    out[i] = (seed - 1) / 2147483646;
-        }
-        return out;
-    }
-    function _nextTrials(n,p) {
-        var out = 0;
-        for (var i = 0; i < n; i++) {
-            seed = seed * 48271 % 2147483647;
-	    var gp = (seed - 1) / 2147483646;
-            if (gp <= p) { out++ }
-        }
-        return out;
-    }
-
-    
-    _seed(seed);
-
-    return {
-	seed: _seed,
-	nextInt: _nextInt,
-	nextFloat: _nextFloat,
-        ff: _ff,
-        nextFloats: _nextFloats,
-        nextTrials: _nextTrials
-    };
-}
 
 var calcButton = document.getElementById("calculate");
 var probabilityInput = document.getElementById("prob");
@@ -149,23 +74,7 @@ function calc95CI(probability, trials, repeats) {
     var counts = [];
     counts.length = repeats;
     // repeat experiments
-    /*
     for (var r = 0; r < repeats; r++) {
-        // var successes = 0;
-        // var randoms = random.nextFloats(trials);
-        var successes = random.nextTrials(trials, probability);
-        // for (var t in randoms) {
-        //if (t <= probability) { successes++; }
-        //}
-        for (var t = 0; t < trials; t++) {
-            if (random.ff() <= probability) {
-                successes++;
-            }
-        }
-        counts.push(successes);
-    }*/
-    for (var r = 0; r < repeats; r++) {
-        //var successes = random.nextTrials(trials, probability);
         var successes = nextTrials(trials, probability);
         counts[r] = successes;
     }
